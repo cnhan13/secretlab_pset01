@@ -26,7 +26,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.4'
-          extension: mbstring, bcmath
+          extensions: mbstring, bcmath
 
       - name: Copy .env
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
@@ -61,7 +61,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.4'
-          extension: mbstring, bcmath
+          extensions: mbstring, bcmath
 
       - name: Composer install
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
@@ -90,7 +90,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '7.4'
-          extension: mbstring, bcmath
+          extensions: mbstring, bcmath
 
       - name: Composer install
         run: composer install -q --no-ansi --no-interaction --no-scripts --no-progress --prefer-dist
