@@ -8,6 +8,12 @@ use PHPUnit\Framework\TestCase;
 
 class EntryTest extends TestCase
 {
+    public function testEntryTable()
+    {
+        $entry = new Entry();
+        $this->assertEquals($entry->getTable(), Entry::table());
+    }
+
     public function testIsValidTimestampGivenValidIntegerTimestampShouldReturnTrue()
     {
         $input = Carbon::now()->timestamp;
