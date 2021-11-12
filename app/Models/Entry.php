@@ -13,6 +13,12 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Entry extends Model
 {
+
+    public static function table()
+    {
+        return with(new static)->getTable();
+    }
+
     protected $fillable = [
         'entry_key',
         'value',
@@ -24,6 +30,10 @@ class Entry extends Model
     {
         return ['created_at'];
     }
+
+    protected $casts = [
+        'created_at' => 'timestamp'
+    ];
 
     public static $rules = [
         'entry_key' => 'required|max:255',
@@ -49,7 +59,7 @@ class Entry extends Model
 
     public static function isValidTimestamp($timestamp = null)
     {
-        return $timestamp !== null && is_numeric($timestamp) && (int)$timestamp==$timestamp;
+        return $timestamp !== null && is_numeric($timestamp) && (int)$timestamp == $timestamp;
     }
 
     public static function getCarbonTimeFromTimestampOrNow($timestamp = null)
@@ -76,5 +86,17 @@ class Entry extends Model
                 'message' => 'Key not found',
             ];
         });
+    }
+
+    public static function createMultipleFromKeyValuePairs(array $pairs)
+    {
+        $now = Carbon::now();
+        return collect($pairs)->map(function ($value, $key) use ($now) {
+            return Entry::create([
+                'entry_key' => $key,
+                'value' => $value,
+                'created_at' => $now,
+            ])->fresh();
+        })->values()->all();
     }
 }

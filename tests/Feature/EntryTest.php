@@ -20,7 +20,7 @@ class EntryTest extends TestCase
         $this->assertDatabaseHas('entries', $entry);
     }
 
-    public function testGetEntryValueAtTimestampGivenExistingKeyAndEarlierCarbonTimeShouldReturnKeyNotFound()
+    public function testDatabaseGetEntryValueAtTimestampGivenExistingKeyAndEarlierCarbonTimeShouldReturnKeyNotFound()
     {
         $factory = new EntryFactory();
 
@@ -41,7 +41,7 @@ class EntryTest extends TestCase
         ], $actual);
     }
 
-    public function testGetEntryValueAtTimestampGivenTwoValuesOfExistingKeyAndCarbonTimeFromFirstCreatedAtToBeforeSecondCreatedAtShouldReturnFirstValue()
+    public function testDatabaseGetEntryValueAtTimestampGivenTwoValuesOfExistingKeyAndCarbonTimeFromFirstCreatedAtToBeforeSecondCreatedAtShouldReturnFirstValue()
     {
         $factory = new EntryFactory();
 
@@ -71,7 +71,7 @@ class EntryTest extends TestCase
         }
     }
 
-    public function testGetEntryValueAtTimestampGivenTwoValuesOfExistingKeyAndCarbonTimeFromSecondCreatedAtOnwardsShouldReturnSecondValue()
+    public function testDatabaseGetEntryValueAtTimestampGivenTwoValuesOfExistingKeyAndCarbonTimeFromSecondCreatedAtOnwardsShouldReturnSecondValue()
     {
         $factory = new EntryFactory();
 
@@ -92,32 +92,47 @@ class EntryTest extends TestCase
         $this->assertEquals(['value' => $entry2->value], $actual);
     }
 
+    public function testDatabaseCreateMultipleFromKeyValuePairs()
+    {
+        $factory = new EntryFactory();
+        /** @var Entry $entry */
+        $pairs = [];
+        $entriesByKey = [];
+
+        while (count($pairs) <= 1) {
+            $entry = $factory->make();
+            $pairs[$entry->entry_key] = $entry->value;
+            $entriesByKey[$entry->entry_key] = $entry;
+        }
+
+        $actual = Entry::createMultipleFromKeyValuePairs($pairs);
+
+        $this->assertNotEmpty($actual);
+
+        foreach ($entriesByKey as $key => $entry) {
+            $this->assertDatabaseHas('entries', $entry->toArray());
+        }
+    }
+
     public function testStoreEmptyJson()
     {
         $response = $this->postJson('/object', []);
         $response
-            ->assertStatus(Response::HTTP_BAD_REQUEST)
-            ->assertJson([
-                'success' => false,
-                'message' => 'Validation errors',
-                'data' => [
-                    'entry_key' => [
-                        'Key is required'
-                    ]
-                ]
-            ]);
+            ->assertStatus(Response::HTTP_OK)
+            ->assertJson([]);
     }
 
     public function testStoreEmptyKey()
     {
-        $response = $this->postJson('/object', ["" => "test value"]);
+        $key = "";
+        $response = $this->postJson('/object', [$key => "test value"]);
         $response
             ->assertStatus(Response::HTTP_BAD_REQUEST)
             ->assertJson([
                 'success' => false,
                 'message' => 'Validation errors',
                 'data' => [
-                    'entry_key' => [
+                    $key => [
                         'Key is required'
                     ]
                 ]
@@ -131,8 +146,10 @@ class EntryTest extends TestCase
         $response
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => 'mykey',
-                'value' => $data['mykey'],
+                [
+                    'entry_key' => 'mykey',
+                    'value' => $data['mykey'],
+                ],
             ]);
     }
 
@@ -143,8 +160,10 @@ class EntryTest extends TestCase
         $response
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => 'mykey',
-                'value' => $data['mykey'],
+                [
+                    'entry_key' => 'mykey',
+                    'value' => $data['mykey'],
+                ],
             ]);
     }
 
@@ -155,14 +174,17 @@ class EntryTest extends TestCase
         $response
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => 'mykey',
-                'value' => $data['mykey'],
+                [
+                    'entry_key' => 'mykey',
+                    'value' => $data['mykey'],
+                ],
             ]);
     }
 
     public function testStoreKeyLongerThan255Chars()
     {
-        $data = [str_repeat('*', 256) => 'value1'];
+        $key = str_repeat('*', 256);
+        $data = [$key => 'value1'];
         $response = $this->postJson('/object', $data);
         $response
             ->assertStatus(Response::HTTP_BAD_REQUEST)
@@ -170,7 +192,7 @@ class EntryTest extends TestCase
                 'success' => false,
                 'message' => 'Validation errors',
                 'data' => [
-                    'entry_key' => [
+                    $key => [
                         'Maximum key length is 255 characters'
                     ]
                 ]
@@ -179,7 +201,8 @@ class EntryTest extends TestCase
 
     public function testStoreValueLongerThan2000Chars()
     {
-        $data = ['mykey' => str_repeat('*', 2001)];
+        $key = 'mykey';
+        $data = [$key => str_repeat('*', 2001)];
         $response = $this->postJson('/object', $data);
         $response
             ->assertStatus(Response::HTTP_BAD_REQUEST)
@@ -187,10 +210,10 @@ class EntryTest extends TestCase
                 'success' => false,
                 'message' => 'Validation errors',
                 'data' => [
-                    'value' => [
+                    $key => [
                         'Maximum value length is 2000 characters'
-                    ]
-                ]
+                    ],
+                ],
             ]);
     }
 
@@ -203,8 +226,10 @@ class EntryTest extends TestCase
         $this->postJson('/object', $data)
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => $entry->entry_key,
-                'value' => $entry->value
+                [
+                    'entry_key' => $entry->entry_key,
+                    'value' => $entry->value,
+                ],
             ]);
 
         $this->get("/object/{$entry->entry_key}")
@@ -223,8 +248,10 @@ class EntryTest extends TestCase
         $this->postJson('/object', $data)
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => $entry->entry_key,
-                'value' => $entry->value
+                [
+                    'entry_key' => $entry->entry_key,
+                    'value' => $entry->value,
+                ],
             ]);
 
         sleep(2);
@@ -234,8 +261,10 @@ class EntryTest extends TestCase
         $this->postJson('/object', $data2)
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => $entry2->entry_key,
-                'value' => $entry2->value
+                [
+                    'entry_key' => $entry2->entry_key,
+                    'value' => $entry2->value,
+                ],
             ]);
 
         $this->get("/object/{$entry->entry_key}")
@@ -254,8 +283,10 @@ class EntryTest extends TestCase
         $this->postJson('/object', $data)
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => $entry->entry_key,
-                'value' => $entry->value
+                [
+                    'entry_key' => $entry->entry_key,
+                    'value' => $entry->value,
+                ],
             ]);
 
         sleep(2);
@@ -267,9 +298,70 @@ class EntryTest extends TestCase
         $this->postJson('/object', $data2)
             ->assertStatus(Response::HTTP_CREATED)
             ->assertJson([
-                'entry_key' => $entry2->entry_key,
-                'value' => $entry2->value
+                [
+                    'entry_key' => $entry2->entry_key,
+                    'value' => $entry2->value,
+                ],
             ]);
+
+        $this->get("/object/{$entry->entry_key}?timestamp=$timestamp")
+            ->assertStatus(Response::HTTP_OK)
+            ->assertJson([
+                'value' => $entry->value
+            ]);
+    }
+
+    public function testGetEntryValueOfBatchCreateFromKeyValuePairs()
+    {
+        $factory = new EntryFactory();
+        /** @var Entry $entry */
+        $pairs = [];
+        $entries = [];
+
+        while (count($pairs) <= 1) {
+            $entry = $factory->make();
+            $pairs[$entry->entry_key] = $entry->value;
+            $entries[] = $entry;
+        }
+
+        $this->postJson('/object', $pairs)
+            ->assertStatus(Response::HTTP_CREATED)
+            ->assertJson([
+                [
+                    'entry_key' => $entries[0]->entry_key,
+                    'value' => $entries[0]->value,
+                ],
+                [
+                    'entry_key' => $entries[1]->entry_key,
+                    'value' => $entries[1]->value,
+                ],
+            ]);
+
+        foreach ($entries as $entry) {
+            $this->get("/object/{$entry->entry_key}")
+                ->assertStatus(Response::HTTP_OK)
+                ->assertJson([
+                    'value' => $entry->value
+                ]);
+        }
+    }
+
+    public function testPostThenGetAtReturnedTimestamp()
+    {
+        $factory = new EntryFactory();
+        /** @var Entry $entry */
+        $entry = $factory->make();
+        $data = [$entry->entry_key => $entry->value];
+        $response = $this->postJson('/object', $data)
+            ->assertStatus(Response::HTTP_CREATED)
+            ->assertJson([
+                [
+                    'entry_key' => $entry->entry_key,
+                    'value' => $entry->value,
+                ],
+            ]);
+
+        $timestamp = $response->decodeResponseJson()[0]['created_at'];
 
         $this->get("/object/{$entry->entry_key}?timestamp=$timestamp")
             ->assertStatus(Response::HTTP_OK)
