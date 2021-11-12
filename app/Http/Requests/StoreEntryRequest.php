@@ -5,6 +5,9 @@ namespace App\Http\Requests;
 
 
 use App\Models\Entry;
+use App\Rules\KeyMax;
+use App\Rules\KeyRequired;
+use App\Rules\ValueMax;
 
 class StoreEntryRequest extends ApiRequest
 {
@@ -13,22 +16,8 @@ class StoreEntryRequest extends ApiRequest
      */
     public function rules()
     {
-        return Entry::$rules;
-    }
-
-    protected function prepareForValidation()
-    {
-        $input = $this->all();
-        $this->replace(empty($input) ? [] : $this->getFormattedData($input));
-    }
-
-    private function getFormattedData($input)
-    {
-        foreach ($input as $key => $value)
-            break;
         return [
-            'entry_key' => $key,
-            'value' => $value
+            '*' => [new KeyRequired(), new KeyMax(255), 'sometimes', new ValueMax(2000)],
         ];
     }
 
